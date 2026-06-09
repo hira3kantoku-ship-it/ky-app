@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>KY活動表アプリ インストール案内</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN','Hiragino Sans','Meiryo',sans-serif;
+      background: #fff;
+      color: #1a202c;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 12mm 14mm;
+      background: #fff;
+    }
+
+    /* ヘッダー */
+    .header {
+      background: #1a4a7a;
+      color: #fff;
+      border-radius: 10px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .header-icon { font-size: 40px; }
+    .header-title h1 { font-size: 22px; font-weight: 800; letter-spacing: 0.05em; }
+    .header-title p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+
+    /* URL・QRエリア */
+    .qr-section {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      background: #f0f4f8;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+    }
+    #qr-canvas { flex-shrink: 0; border-radius: 8px; }
+    .qr-info h2 { font-size: 15px; font-weight: 700; color: #1a4a7a; margin-bottom: 6px; }
+    .qr-info .url-box {
+      background: #1a4a7a; color: #fff;
+      padding: 8px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 0.03em; margin-bottom: 10px;
+      word-break: break-all;
+    }
+    .qr-info p { font-size: 12px; color: #475569; line-height: 1.7; }
+
+    /* インストール手順 */
+    .install-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .install-card {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #e2e8f0;
+    }
+
+    .install-card-header {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .install-card-header.iphone { background: #000; color: #fff; }
+    .install-card-header.android { background: #2d7a3a; color: #fff; }
+
+    .install-card-header .device-icon { font-size: 26px; }
+    .install-card-header .device-name { font-size: 16px; font-weight: 800; }
+    .install-card-header .browser-badge {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+    .iphone .browser-badge { background: #0a84ff; }
+    .android .browser-badge { background: #fbbc04; color: #000; }
+
+    .install-steps { padding: 12px 14px; }
+    .step {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .step:last-child { margin-bottom: 0; }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .iphone-num { background: #000; }
+    .android-num { background: #2d7a3a; }
+
+    .step-text { font-size: 12.5px; line-height: 1.6; color: #1a202c; }
+    .step-text strong { color: #1a4a7a; }
+    .step-text .tag {
+      display: inline-block;
+      background: #f0f4f8;
+      border: 1px solid #cbd5e1;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* 注意事項 */
+    .notes {
+      background: #fff8e1;
+      border: 2px solid #f59e0b;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .notes h3 { font-size: 13px; font-weight: 700; color: #b45309; margin-bottom: 6px; }
+    .notes ul { padding-left: 18px; }
+    .notes li { font-size: 12px; line-height: 1.8; color: #1a202c; }
+
+    /* 使い方フロー */
+    .flow-section { margin-bottom: 16px; }
+    .flow-title {
+      background: #1a4a7a; color: #fff;
+      padding: 7px 14px; border-radius: 8px 8px 0 0;
+      font-size: 13px; font-weight: 700;
+    }
+    .flow-steps {
+      display: flex;
+      border: 2px solid #1a4a7a;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
+    }
+    .flow-step {
+      flex: 1;
+      padding: 10px 8px;
+      text-align: center;
+      border-right: 1px solid #e2e8f0;
+      font-size: 11px;
+      line-height: 1.5;
+      position: relative;
+    }
+    .flow-step:last-child { border-right: none; }
+    .flow-step .flow-num {
+      display: block;
+      width: 22px; height: 22px;
+      background: #1a4a7a; color: #fff;
+      border-radius: 50%;
+      font-size: 11px; font-weight: 800;
+      line-height: 22px;
+      margin: 0 auto 4px;
+    }
+    .flow-step .flow-emoji { font-size: 18px; display: block; margin-bottom: 3px; }
+    .flow-step .flow-label { font-weight: 700; font-size: 12px; }
+
+    /* フッター */
+    .footer {
+      text-align: center;
+      font-size: 10px;
+      color: #94a3b8;
+      padding-top: 10px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    /* 印刷ボタン */
+    .print-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #1a4a7a; padding: 10px 20px;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .print-bar span { color: #fff; font-size: 14px; }
+    .btn-pdf {
+      background: #e8a020; color: #fff; border: none;
+      padding: 10px 28px; border-radius: 8px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-pdf:hover { background: #d4911a; }
+    body { padding-top: 52px; }
+
+    /* 印刷設定 */
+    @page { size: A4; margin: 10mm 12mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding-top: 0; }
+      .print-bar { display: none; }
+      .page { margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+<!-- 印刷バー -->
+<div class="print-bar">
+  <span>📄 印刷またはPDF保存</span>
+  <button class="btn-pdf" onclick="window.print()">📥 PDFで保存 / 印刷する</button>
+</div>
+
+<div class="page">
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <div class="header-icon">⚠️</div>
+    <div class="header-title">
+      <h1>KY活動表アプリ　インストール案内</h1>
+      <p>スマートフォンにインストールして、毎朝の危険予知活動をデジタルで記録しましょう</p>
+    </div>
+  </div>
+
+  <!-- QRコード -->
+  <div class="qr-section">
+    <div id="qr-canvas"></div>
+    <div class="qr-info">
+      <h2>📱 まずはカメラでQRコードをスキャン！</h2>
+      <div class="url-box">https://ky-app-gules.vercel.app</div>
+      <p>
+        ① スマホのカメラアプリを起動<br>
+        ② QRコードにかざす<br>
+        ③ 表示されたリンクをタップ<br>
+        ④ ブラウザが開いたら下の手順でインストール
+      </p>
+    </div>
+  </div>
+
+  <!-- インストール手順 -->
+  <div class="install-grid">
+
+    <!-- iPhone -->
+    <div class="install-card">
+      <div class="install-card-header iphone">
+        <div class="device-icon">🍎</div>
+        <div class="device-name">iPhone</div>
+        <div class="browser-badge">Safari で開く</div>
+      </div>
+      <div class="install-steps">
+        <div class="step">
+          <div class="step-num iphone-num">1</div>
+          <div class="step-text">QRコードをカメラで読み取り、<strong>Safariで開く</strong><br><span class="tag">※ChromeやBraveは不可</span></div>
+        </div>
+        <div class="step">
+          <div class="step-num iphone-num">2</div>
+          <div class="step-text">画面下中央の<strong>「共有」ボタン</strong>（□↑）をタップ</div>
+        </div>
+        <div class="step">
+          <div class="step-num iphone-num">3</div>
+          <div class="step-text">メニューを下にスクロールして<strong>「ホーム画面に追加」</strong>をタップ</div>
+        </div>
+        <div class="step">
+          <div class="step-num iphone-num">4</div>
+          <div class="step-text">右上の<strong>「追加」</strong>をタップして完了！</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Android -->
+    <div class="install-card">
+      <div class="install-card-header android">
+        <div class="device-icon">🤖</div>
+        <div class="device-name">Android</div>
+        <div class="browser-badge">Chrome で開く</div>
+      </div>
+      <div class="install-steps">
+        <div class="step">
+          <div class="step-num android-num">1</div>
+          <div class="step-text">QRコードをカメラで読み取り、<strong>Chromeで開く</strong></div>
+        </div>
+        <div class="step">
+          <div class="step-num android-num">2</div>
+          <div class="step-text">画面下に表示される<strong>「アプリをインストール」</strong>バナーをタップ</div>
+        </div>
+        <div class="step">
+          <div class="step-num android-num">3</div>
+          <div class="step-text">バナーが出ない場合は右上の<strong>「︙（メニュー）」→「ホーム画面に追加」</strong></div>
+        </div>
+        <div class="step">
+          <div class="step-num android-num">4</div>
+          <div class="step-text"><strong>「インストール」</strong>をタップして完了！</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 使い方フロー -->
+  <div class="flow-section">
+    <div class="flow-title">📋 毎朝の使い方（4ステップ）</div>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <span class="flow-num">1</span>
+        <span class="flow-emoji">📅</span>
+        <span class="flow-label">基本情報入力</span>
+        <div>日付・天気・<br>会社名・人数</div>
+      </div>
+      <div class="flow-step">
+        <span class="flow-num">2</span>
+        <span class="flow-emoji">🔨</span>
+        <span class="flow-label">作業内容入力</span>
+        <div>工種選択・<br>作業内容・工具</div>
+      </div>
+      <div class="flow-step">
+        <span class="flow-num">3</span>
+        <span class="flow-emoji">🤖</span>
+        <span class="flow-label">AI危険提案</span>
+        <div>危険項目・対策を<br>AIが自動提案</div>
+      </div>
+      <div class="flow-step">
+        <span class="flow-num">4</span>
+        <span class="flow-emoji">✍️</span>
+        <span class="flow-label">署名・PDF保存</span>
+        <div>全員が署名→<br>Dropboxに自動保存</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 注意事項 -->
+  <div class="notes">
+    <h3>⚠️ ご注意</h3>
+    <ul>
+      <li>iPhoneは必ず <strong>Safari</strong> で開いてください（Chrome・Braveでは署名機能が動作しません）</li>
+      <li>初回のみインターネット接続が必要です。インストール後はWi-Fiがなくても一部機能が使えます</li>
+      <li>PDF・Dropbox保存にはインターネット接続が必要です</li>
+    </ul>
+  </div>
+
+  <!-- フッター -->
+  <div class="footer">
+    第一関根マンション屋上防水改修工事　KY活動表アプリ　|　https://ky-app-gules.vercel.app
+  </div>
+
+</div>
+
+<!-- QRコード生成 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  new QRCode(document.getElementById('qr-canvas'), {
+    text: 'https://ky-app-gules.vercel.app',
+    width: 160, height: 160,
+    colorDark: '#1a4a7a',
+    colorLight: '#f0f4f8',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+</script>
+</body>
+</html>

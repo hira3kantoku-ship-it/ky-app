@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a4a7a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KY活動表">
+  <title>KY活動表</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    /* QR Modal */
+    .qr-modal-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .qr-modal-bg.open { opacity: 1; pointer-events: all; }
+    .qr-modal {
+      background: #fff; border-radius: 18px; padding: 28px 24px 22px;
+      max-width: 340px; width: 90%; text-align: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+      transform: scale(0.92); transition: transform 0.25s;
+    }
+    .qr-modal-bg.open .qr-modal { transform: scale(1); }
+    .qr-modal h2 { font-size: 17px; color: #1a4a7a; margin-bottom: 4px; }
+    .qr-modal p { font-size: 12px; color: #64748b; margin-bottom: 16px; line-height: 1.6; }
+    #qr-container img, #qr-container canvas { display: block; }
+    .qr-url {
+      margin-top: 14px; font-size: 12px; font-weight: 600; color: #1a4a7a;
+      background: #eff6ff; padding: 8px 12px; border-radius: 8px;
+      word-break: break-all; line-height: 1.5;
+    }
+    .qr-close {
+      margin-top: 16px; width: 100%; padding: 12px; border: none;
+      border-radius: 10px; background: #1a4a7a; color: #fff;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .qr-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 22px; padding: 4px 6px; border-radius: 8px;
+      transition: background 0.15s; color: #fff;
+    }
+    .qr-btn:hover { background: rgba(255,255,255,0.15); }
+  </style>
+</head>
+<body>
+
+<!-- ===== Header ===== -->
+<header class="app-header">
+  <div class="header-inner">
+    <div class="header-icon">⚠️</div>
+    <div class="header-title">
+      <h1>KY活動表</h1>
+      <p>危険予知活動記録アプリ</p>
+    </div>
+    <button class="qr-btn" onclick="openQR()" title="QRコードを表示">📲</button>
+  </div>
+  <div class="progress-bar">
+    <div class="step-indicators">
+      <div class="step-dot active" data-step="1">1</div>
+      <div class="step-line"></div>
+      <div class="step-dot" data-step="2">2</div>
+      <div class="step-line"></div>
+      <div class="step-dot" data-step="3">3</div>
+      <div class="step-line"></div>
+      <div class="step-dot" data-step="4">4</div>
+    </div>
+    <div class="step-label" id="step-label">基本情報</div>
+  </div>
+</header>
+
+<!-- ===== Main ===== -->
+<main class="main-content">
+
+  <!-- Step 1: 基本情報 -->
+  <div class="step-panel active" data-step="1">
+    <div class="card">
+      <div class="card-title">📋 基本情報</div>
+
+      <div class="field">
+        <label for="field-date">実施日 <span class="required">*</span></label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="date" id="field-date" style="flex:1;" onchange="updateDayOfWeek()">
+          <div id="day-of-week" style="
+            min-width:52px;height:48px;border-radius:8px;
+            background:#1a4a7a;color:#fff;
+            display:flex;align-items:center;justify-content:center;
+            font-size:17px;font-weight:700;letter-spacing:0.05em;
+            flex-shrink:0;
+          ">－</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="field-weather">天気</label>
+        <select id="field-weather">
+          <option value="">選択</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="field-site">現場名 <span class="required">*</span></label>
+        <select id="field-site">
+          <option value="">読み込み中...</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="field-company">会社名・グループ名 <span class="required">*</span></label>
+        <input type="text" id="field-company" placeholder="例：〇〇建設株式会社">
+      </div>
+
+      <div class="field">
+        <label for="field-group">班・チーム名（任意）</label>
+        <input type="text" id="field-group" placeholder="例：鉄筋班・A班">
+      </div>
+
+      <div class="field">
+        <label for="field-workers">参加人数 <span class="required">*</span></label>
+        <input type="number" id="field-workers" min="1" max="30" value="1" placeholder="1">
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-primary" onclick="goNext()">次へ　→</button>
+    </div>
+  </div>
+
+  <!-- Step 2: 作業内容 -->
+  <div class="step-panel" data-step="2">
+    <div class="card">
+      <div class="card-title">🔨 本日の作業内容</div>
+
+      <!-- ① 工種 -->
+      <div class="field">
+        <label for="field-trade">工種（建設業法）<span class="required">*</span></label>
+        <select id="field-trade" onchange="onTradeChange()" style="font-size:16px;">
+          <option value="">— 選択してください —</option>
+        </select>
+      </div>
+
+      <!-- ② 作業内容 -->
+      <div class="field">
+        <label for="field-work-input">作業内容 <span class="required">*</span></label>
+        <textarea id="field-work-input" rows="4"
+          placeholder="例：9F屋上にてシート防水の撤去・新設。トーチバーナー使用。足場上での高所作業あり。"
+          style="font-size:15px;line-height:1.7;"></textarea>
+      </div>
+
+      <!-- ③ 主な使用工具 -->
+      <div class="field" id="tools-section" style="display:none;">
+        <label>主な使用工具（複数選択可）</label>
+        <div id="tools-checkbox-container" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+        <input type="text" id="field-tool-other" placeholder="その他の工具を入力（例：安全帯）"
+          style="font-size:14px;margin-top:4px;">
+      </div>
+
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">
+        💡 工種・作業内容・工具が詳しいほどAIの危険提案精度が上がります
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goNext()">🤖 AI分析へ　→</button>
+    </div>
+  </div>
+
+  <!-- Step 3: 危険のポイント（AI提案） -->
+  <div class="step-panel" data-step="3">
+
+    <!-- AI分析中アニメーション -->
+    <div id="ai-analyzing" style="display:none;">
+      <div class="card" style="text-align:center;padding:40px 20px;">
+        <div style="font-size:48px;margin-bottom:16px;animation:pulse 1s infinite;">🤖</div>
+        <div style="font-size:16px;font-weight:700;color:#1a4a7a;margin-bottom:8px;">作業内容を分析中...</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:20px;">関連する危険項目を抽出しています</div>
+        <div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+          <div id="ai-progress-bar" style="height:100%;background:linear-gradient(90deg,#1a4a7a,#2563ab);border-radius:3px;width:0%;transition:width 0.1s;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分析結果 -->
+    <div id="ai-result" style="display:none;">
+      <div class="card">
+        <div class="card-title">
+          🚨 危険のポイントと対策
+          <span class="badge zero" id="danger-badge">0</span>
+        </div>
+
+        <!-- AIおすすめ -->
+        <div id="ai-recommend-section" style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:8px;border-left:4px solid #2563ab;">
+            <span style="font-size:18px;">✨</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#1e40af;">AIがおすすめする危険項目</div>
+              <div style="font-size:11px;color:#3b82f6;">入力内容から自動抽出しました。チェックを確認・調整してください。</div>
+            </div>
+          </div>
+          <div id="recommend-container"></div>
+        </div>
+
+        <!-- その他 -->
+        <div id="ai-other-section">
+          <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;padding:6px 10px;background:#f8fafc;border-radius:6px;">
+            ＋ その他の危険項目（必要に応じて追加してください）
+          </div>
+          <div id="other-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="step3-nav" class="nav-buttons" style="display:none;">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goNext()">署名へ　→</button>
+    </div>
+  </div>
+
+  <!-- Step 4: 署名 -->
+  <div class="step-panel" data-step="4">
+    <div class="card">
+      <div class="card-title">✍️ 参加者署名</div>
+      <div class="sig-count-info" id="sig-count-info">参加者の署名欄</div>
+      <div id="sig-container"></div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-secondary" onclick="goPrev()">← 戻る</button>
+      <button class="btn btn-accent" onclick="goNext()">📄 PDF作成・保存</button>
+    </div>
+  </div>
+
+  <!-- Step 5: 完了 -->
+  <div class="step-panel" data-step="5">
+    <div class="card">
+      <div class="success-screen">
+        <div class="success-icon">✅</div>
+        <div class="success-title">KY活動表を作成しました！</div>
+        <div class="success-sub">
+          PDFがダウンロードされました。<br>
+          LINEやメールで現場監督に送付してください。
+        </div>
+        <div id="dropbox-status" style="
+          font-size:13px;font-weight:600;padding:12px 16px;border-radius:10px;
+          background:#f0f4f8;margin-bottom:16px;line-height:1.6;
+          min-height:44px;display:flex;align-items:center;justify-content:center;
+          white-space:pre-line;text-align:center;
+        ">📤 Dropboxにアップロード中...</div>
+        <div style="background:#f0f9ff;border-radius:10px;padding:16px;margin-bottom:24px;text-align:left;font-size:13px;line-height:1.8;color:#1e40af;">
+          <strong>📱 LINEで送る場合</strong><br>
+          ダウンロードフォルダのPDFを開き、<br>
+          「共有」→「LINE」を選択してください。
+        </div>
+        <div class="nav-buttons" style="flex-direction:column;gap:10px;">
+          <button id="pdf-download-btn" class="btn btn-success" style="display:none;">
+            📄 PDFをダウンロード
+          </button>
+          <button class="btn btn-primary" onclick="resetApp()">🔄 新しいKY表を作成する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== QR Modal ===== -->
+<div class="qr-modal-bg" id="qr-modal-bg" onclick="closeQROnBg(event)">
+  <div class="qr-modal">
+    <h2>📲 スマホでスキャン</h2>
+    <p>このQRコードをスマホのカメラで読み取ると<br>同じWi-Fiならアプリが開きます</p>
+    <div id="qr-container" style="display:inline-block;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.12)"></div>
+    <div class="qr-url" id="qr-url-text"></div>
+    <button class="qr-close" onclick="closeQR()">閉じる</button>
+  </div>
+</div>
+
+<!-- ===== Brave Warning Banner ===== -->
+<div id="brave-warning" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;
+  background:#c0392b;color:#fff;padding:14px 16px;font-size:13px;line-height:1.6;
+  box-shadow:0 -3px 12px rgba(0,0,0,0.3);">
+  <strong>⚠️ Braveブラウザでは署名機能が使えません</strong><br>
+  iPhoneの <strong>Safari</strong> または <strong>Chrome</strong> で開き直してください。<br>
+  <span style="font-size:11px;opacity:0.85;">
+    設定方法：Braveの設定 → シールド → フィンガープリント保護をオフにしても使えます
+  </span>
+  <button onclick="document.getElementById('brave-warning').style.display='none'"
+    style="float:right;background:rgba(255,255,255,0.25);border:none;color:#fff;
+    padding:4px 12px;border-radius:6px;font-size:13px;cursor:pointer;margin-top:2px;">
+    閉じる
+  </button>
+</div>
+
+<!-- ===== Loading Overlay ===== -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">PDF を生成中...</div>
+</div>
+
+<!-- ===== Toast ===== -->
+<div class="toast" id="toast"></div>
+
+<!-- ===== Scripts ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="./data.js?v=16"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="./app.js?v=16"></script>
+
+<!-- Step label update -->
+<script>
+// QR Code
+let _qrInstance = null;
+function openQR() {
+  const url = location.href.replace(/\/$/, '');
+  document.getElementById('qr-url-text').textContent = url;
+  const container = document.getElementById('qr-container');
+  container.innerHTML = '';
+  if (typeof QRCode !== 'undefined') {
+    _qrInstance = new QRCode(container, {
+      text: url, width: 220, height: 220,
+      colorDark: '#1a4a7a', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } else {
+    container.innerHTML = '<p style="color:#c0392b;font-size:13px;">QRコードライブラリを読み込み中...<br>ネット接続を確認してください</p>';
+  }
+  document.getElementById('qr-modal-bg').classList.add('open');
+}
+function closeQR() {
+  document.getElementById('qr-modal-bg').classList.remove('open');
+}
+function closeQROnBg(e) {
+  if (e.target === document.getElementById('qr-modal-bg')) closeQR();
+}
+
+const STEP_LABELS = ['', '基本情報', '作業内容', '危険のポイント', '参加者署名', '完了'];
+const origShowStep = showStep;
+window.showStep = function(step) {
+  origShowStep(step);
+  document.getElementById('step-label').textContent = STEP_LABELS[step] || '';
+};
+</script>
+
+</body>
+</html>
