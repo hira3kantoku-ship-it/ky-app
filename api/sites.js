@@ -1,7 +1,7 @@
 // 現場名リスト取得API（読み取り専用）
 // GET /api/sites → 現場名配列を返す
 
-const DROPBOX_PATH = '/現場名管理/_sites_config.json';
+const DROPBOX_PATH = '/genba-kanri/_sites_config.json';
 
 async function getAccessToken() {
   const res = await fetch('https://api.dropbox.com/oauth2/token', {
