@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     // 2. アップロード先パス
     const safeSite = (siteName || '不明').replace(/[/\\:*?"<>|]/g, '_');
     const safeDate = date || new Date().toISOString().slice(0, 10);
-    const uploadPath = `/KY記録/${safeSite}/${safeDate}/${fileName}`;
+    const uploadPath = `/${safeSite}/KY記録/${safeDate}/${fileName}`;
 
     // 3. Dropbox へアップロード
     const pdfBuffer = Buffer.from(pdfBase64, 'base64');
