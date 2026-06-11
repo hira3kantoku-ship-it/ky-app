@@ -1,5 +1,25 @@
 // Vercel Serverless Function: PDF を受け取り Dropbox へアップロード
 // 環境変数: DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN
+// メール通知用: GMAIL_USER, GMAIL_APP_PASSWORD, NOTIFY_EMAIL
+
+import nodemailer from 'nodemailer';
+
+// アップロード成功通知（ベストエフォート: 失敗してもアップロード結果には影響させない）
+async function sendNotifyMail({ siteName, date, path }) {
+  const { GMAIL_USER, GMAIL_APP_PASSWORD, NOTIFY_EMAIL } = process.env;
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD || !NOTIFY_EMAIL) return;
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+  });
+  await transporter.sendMail({
+    from: `"KY記録通知" <${GMAIL_USER}>`,
+    to: NOTIFY_EMAIL,
+    subject: `【KY記録】${siteName} ${date}`,
+    text: `KY記録がアップロードされました。\n\n現場名: ${siteName}\n日付: ${date}\n保存先: ${path}`,
+  });
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -47,6 +67,14 @@ export default async function handler(req, res) {
     if (!uploadRes.ok) throw new Error(`dropbox_error(${uploadRes.status}): ${await uploadRes.text()}`);
 
     const result = await uploadRes.json();
+
+    // 4. メール通知（失敗してもアップロード成功レスポンスは維持）
+    try {
+      await sendNotifyMail({ siteName: safeSite, date: safeDate, path: result.path_display });
+    } catch (mailErr) {
+      console.error('notify mail error:', mailErr.message);
+    }
+
     return res.status(200).json({ success: true, path: result.path_display });
 
   } catch (err) {
