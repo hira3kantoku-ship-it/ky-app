@@ -211,7 +211,7 @@ function buildDangerCard(i, containerId, isRecommended) {
   const measuresHTML = item.measures.map((m, mi) => `
     <div class="measure-item" data-danger="${i}" data-measure="${mi}" onclick="toggleMeasure(this)">
       <input type="checkbox" id="measure-${i}-${mi}"
-        onclick="event.stopPropagation(); this.parentElement.classList.toggle('selected', this.checked)">
+        onclick="event.stopPropagation(); this.parentElement.classList.toggle('selected', this.checked); syncDangerCheck(${i})">
       <span class="measure-text">${m}</span>
     </div>
   `).join('');
@@ -226,7 +226,7 @@ function buildDangerCard(i, containerId, isRecommended) {
     <div class="danger-body" id="danger-body-${i}">
       <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px;">対策を選択（複数可）</div>
       <div class="measures-list">${measuresHTML}</div>
-      <textarea id="measure-other-${i}" placeholder="その他の対策を入力..." rows="2" style="margin-top:6px;font-size:13px;"></textarea>
+      <textarea id="measure-other-${i}" placeholder="その他の対策を入力..." rows="2" oninput="syncDangerCheck(${i})" style="margin-top:6px;font-size:13px;"></textarea>
       <div class="risk-level" style="margin-top:10px;">
         <label>リスクレベル</label>
         <div class="risk-btns">
@@ -241,24 +241,33 @@ function buildDangerCard(i, containerId, isRecommended) {
 }
 
 function toggleDangerCard(i) {
-  const body = document.getElementById(`danger-body-${i}`);
-  const cb = document.getElementById(`danger-${i}`);
-  // 未チェックならチェックして開く（直後にtoggleすると閉じてしまうためreturn）
-  if (!cb.checked) {
-    cb.checked = true;
-    onDangerToggle(i, cb);
-    return;
-  }
-  body.classList.toggle('open');
+  // カードタップは対策欄の開閉のみ（チェックは対策を選んだ時に入る）
+  document.getElementById(`danger-body-${i}`).classList.toggle('open');
 }
 
 function onDangerToggle(i, cb) {
   const body = document.getElementById(`danger-body-${i}`);
   if (cb.checked) {
+    // 直接チェックしても対策未選択ならチェックは入れず、対策欄を開くだけ
+    syncDangerCheck(i);
     body.classList.add('open');
   } else {
+    // チェックを外したら選択済みの対策もクリアして閉じる
+    body.querySelectorAll('.measure-item').forEach(el => {
+      el.classList.remove('selected');
+      el.querySelector('input[type=checkbox]').checked = false;
+    });
+    document.getElementById(`measure-other-${i}`).value = '';
     body.classList.remove('open');
+    updateDangerBadge();
   }
+}
+
+// 対策が1つ以上選ばれている（またはその他に入力がある）時だけ危険項目にチェック
+function syncDangerCheck(i) {
+  const hasMeasure = document.querySelectorAll(`#danger-body-${i} .measure-item.selected`).length > 0
+    || document.getElementById(`measure-other-${i}`).value.trim() !== '';
+  document.getElementById(`danger-${i}`).checked = hasMeasure;
   updateDangerBadge();
 }
 
@@ -266,6 +275,7 @@ function toggleMeasure(el) {
   const cb = el.querySelector('input[type=checkbox]');
   cb.checked = !cb.checked;
   el.classList.toggle('selected', cb.checked);
+  syncDangerCheck(el.dataset.danger);
 }
 
 function setRisk(i, level) {
