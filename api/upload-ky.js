@@ -21,6 +21,20 @@ async function sendNotifyMail({ siteName, date, path }) {
   });
 }
 
+// 安全書類DX（GAS）の Google ドライブにも保存（ベストエフォート: 失敗しても Dropbox 保存の結果には影響させない）
+// 環境変数: SAFETY_DOCS_UPLOAD_URL（GAS WebアプリURL）, FIELD_UPLOAD_SECRET（GASのスクリプトプロパティと同じ値）
+async function saveToSafetyDocsDrive({ type, site, date, fileName, pdfBase64 }) {
+  const { SAFETY_DOCS_UPLOAD_URL, FIELD_UPLOAD_SECRET } = process.env;
+  if (!SAFETY_DOCS_UPLOAD_URL || !FIELD_UPLOAD_SECRET) return { ok: false, error: 'not_configured' };
+  const res = await fetch(SAFETY_DOCS_UPLOAD_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'fieldupload', secret: FIELD_UPLOAD_SECRET, type, site, date, fileName, pdfBase64 }),
+  });
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { return { ok: false, error: `gas_http_${res.status}` }; }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -29,8 +43,14 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
+  let drivePromise = Promise.resolve({ ok: false });
   try {
     const { pdfBase64, fileName, siteName, date } = req.body;
+
+    drivePromise = saveToSafetyDocsDrive({
+      type: 'KY', site: (siteName || '').trim(), date: date || new Date().toISOString().slice(0, 10),
+      fileName: fileName, pdfBase64,
+    }).catch(err => ({ ok: false, error: err.message }));
 
     // 1. Refresh Token → Access Token
     const tokenRes = await fetch('https://api.dropbox.com/oauth2/token', {
@@ -75,10 +95,14 @@ export default async function handler(req, res) {
       console.error('notify mail error:', mailErr.message);
     }
 
-    return res.status(200).json({ success: true, path: result.path_display });
+    const drive = await drivePromise;
+    if (!drive.ok) console.error('safety-docs drive error:', drive.error);
+
+    return res.status(200).json({ success: true, path: result.path_display, drive: !!drive.ok });
 
   } catch (err) {
     console.error('upload-ky error:', err.message);
+    await drivePromise; // Dropbox が失敗してもドライブ保存は最後まで待つ
     return res.status(500).json({ success: false, error: err.message });
   }
 }
