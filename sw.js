@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ky-app-v16';
+const CACHE_NAME = 'ky-app-v17';
 const ASSETS = [
   './index.html',
   './style.css',
