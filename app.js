@@ -210,7 +210,8 @@ function buildDangerCard(i, containerId, isRecommended) {
 
   const measuresHTML = item.measures.map((m, mi) => `
     <div class="measure-item" data-danger="${i}" data-measure="${mi}" onclick="toggleMeasure(this)">
-      <input type="checkbox" id="measure-${i}-${mi}">
+      <input type="checkbox" id="measure-${i}-${mi}"
+        onclick="event.stopPropagation(); this.parentElement.classList.toggle('selected', this.checked)">
       <span class="measure-text">${m}</span>
     </div>
   `).join('');
@@ -242,9 +243,11 @@ function buildDangerCard(i, containerId, isRecommended) {
 function toggleDangerCard(i) {
   const body = document.getElementById(`danger-body-${i}`);
   const cb = document.getElementById(`danger-${i}`);
+  // 未チェックならチェックして開く（直後にtoggleすると閉じてしまうためreturn）
   if (!cb.checked) {
     cb.checked = true;
     onDangerToggle(i, cb);
+    return;
   }
   body.classList.toggle('open');
 }
