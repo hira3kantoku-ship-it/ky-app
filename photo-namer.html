@@ -108,11 +108,15 @@ function addRow(it) {
 
 async function readBoard(it) {
   try {
-    const r = await fetch('./api/read-board', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: await toBase64(it.file) }),
-    });
-    const d = await r.json();
+    const body = JSON.stringify({ image: await toBase64(it.file) });
+    let r, d;
+    for (let i = 0; i < 6; i++) { // 無料枠の回数制限(429)は待って再試行
+      r = await fetch('./api/read-board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      d = await r.json();
+      if (r.status !== 429) break;
+      it.nameCell.textContent = '回数制限のため待機中…';
+      await new Promise((ok) => setTimeout(ok, 15000));
+    }
     if (!r.ok) throw new Error(d.error);
     Object.assign(it, d);
     it.inputs.forEach((inp) => { inp.value = it[inp.dataset.k]; });
@@ -137,7 +141,7 @@ $('#files').addEventListener('change', async (ev) => {
   const show = () => { $('#status').textContent = `読み取り中 ${done}/${added.length}`; };
   show();
   const queue = [...added];
-  await Promise.all(Array.from({ length: 3 }, async () => {
+  await Promise.all(Array.from({ length: 2 }, async () => {
     while (queue.length) { await readBoard(queue.shift()); done++; show(); }
   }));
   rename();
