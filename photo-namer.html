@@ -26,8 +26,9 @@
 <p style="font-size:13px;margin:0 0 12px">工事黒板を読み取り「工種_工事場所_作業内容」でファイル名を付けます。同じ名前は撮影日時順に連番を付けます。読み取り結果は修正できます。</p>
 <div class="bar">
   <label class="btn">写真を選択<input id="files" type="file" accept="image/jpeg" multiple></label>
-  <button id="zip" disabled>保存</button>
-  <input id="key" type="password" placeholder="Gemini APIキー" style="flex:1;min-width:200px;padding:8px;font-size:14px">
+  <button id="zip" disabled>写真を保存</button>
+  <input id="key" type="password" placeholder="Gemini APIキーを貼り付け" style="flex:1;min-width:200px;padding:8px;font-size:14px">
+  <span id="keyState" style="align-self:center;font-size:13px"></span>
 </div>
 <div id="status"></div>
 <table id="tbl" hidden>
@@ -40,8 +41,11 @@ const items = [];
 const $ = (s) => document.querySelector(s);
 
 // ---- APIキー（このブラウザにだけ保存） ----
+// 入力した時点で自動保存し、状態を表示する
+const showKey = () => { $('#keyState').textContent = localStorage.getItem('geminiKey') ? '✅ キー保存済み' : '⚠ キー未入力'; };
 $('#key').value = localStorage.getItem('geminiKey') || '';
-$('#key').addEventListener('change', () => localStorage.setItem('geminiKey', $('#key').value.trim()));
+$('#key').addEventListener('input', () => { localStorage.setItem('geminiKey', $('#key').value.trim()); showKey(); });
+showKey();
 
 // ---- Gemini API（無料枠） ----
 // 無料枠の回数に余裕がある旧モデルを優先。提供終了(404)なら次の候補を使う
@@ -203,7 +207,7 @@ $('#files').addEventListener('change', async (ev) => {
     done += batch.length; show();
   }
   rename();
-  $('#status').textContent = `完了（${items.length}枚）。内容を確認して「保存」を押してください。`;
+  $('#status').textContent = `完了（${items.length}枚）。内容を確認して「写真を保存」を押してください。`;
   $('#zip').disabled = false;
 });
 
