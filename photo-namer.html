@@ -66,14 +66,14 @@ function exifDate(buf) {
   return null;
 }
 
-// ---- 送信用に縮小 (長辺1568px) ----
+// ---- 送信用に縮小 (長辺1280px) ----
 async function toBase64(file) {
   const bmp = await createImageBitmap(file);
-  const s = Math.min(1, 1568 / Math.max(bmp.width, bmp.height));
+  const s = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
   const c = document.createElement('canvas');
   c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-  return c.toDataURL('image/jpeg', 0.85).split(',')[1];
+  return c.toDataURL('image/jpeg', 0.75).split(',')[1];
 }
 
 const clean = (s) => (s || '').replace(/[\\/:*?"<>|\r\n\t]/g, '').replace(/\s+/g, ' ').trim();
@@ -106,23 +106,25 @@ function addRow(it) {
   $('#tbl tbody').appendChild(tr);
 }
 
-async function readBoard(it) {
+// 10枚ずつまとめて1回で送る（30枚なら3回）
+async function readBoards(batch) {
   try {
-    const body = JSON.stringify({ image: await toBase64(it.file) });
+    const body = JSON.stringify({ images: await Promise.all(batch.map((it) => toBase64(it.file))) });
     let r, d;
     for (let i = 0; i < 6; i++) { // 無料枠の回数制限(429)は待って再試行
       r = await fetch('./api/read-board', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
       d = await r.json();
       if (r.status !== 429) break;
-      it.nameCell.textContent = '回数制限のため待機中…';
-      await new Promise((ok) => setTimeout(ok, 15000));
+      batch.forEach((it) => { it.nameCell.textContent = '回数制限のため待機中…'; });
+      await new Promise((ok) => setTimeout(ok, 20000));
     }
     if (!r.ok) throw new Error(d.error);
-    Object.assign(it, d);
-    it.inputs.forEach((inp) => { inp.value = it[inp.dataset.k]; });
+    batch.forEach((it, i) => {
+      Object.assign(it, d.results[i]);
+      it.inputs.forEach((inp) => { inp.value = it[inp.dataset.k]; });
+    });
   } catch (e) {
-    it.error = true;
-    it.nameCell.innerHTML = `<span class="err">読み取り失敗: ${e.message}</span>`;
+    batch.forEach((it) => { it.nameCell.innerHTML = `<span class="err">読み取り失敗: ${e.message}</span>`; });
   }
 }
 
@@ -140,10 +142,11 @@ $('#files').addEventListener('change', async (ev) => {
   let done = 0;
   const show = () => { $('#status').textContent = `読み取り中 ${done}/${added.length}`; };
   show();
-  const queue = [...added];
-  await Promise.all(Array.from({ length: 2 }, async () => {
-    while (queue.length) { await readBoard(queue.shift()); done++; show(); }
-  }));
+  for (let i = 0; i < added.length; i += 10) {
+    const batch = added.slice(i, i + 10);
+    await readBoards(batch);
+    done += batch.length; show();
+  }
   rename();
   $('#status').textContent = `完了（${items.length}枚）。内容を確認して「ZIPで保存」を押してください。`;
   $('#zip').disabled = false;
