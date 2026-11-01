@@ -57,7 +57,8 @@ const MODELS = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-flash-lite-
 const MAX_IMAGES = 10;
 
 const PROMPT = `複数の工事写真を「画像1」「画像2」…の順で渡します。各写真に写っている工事黒板の文字を読み取り、画像の順番どおりに結果を配列で返してください。
-各写真について次の3項目を抽出します（工事件名・工事名は不要）。
+各写真について次の4項目を抽出します。
+- koujimei: 工事件名・工事名（例: 23マンション）。ファイル名には使わず、保存先の名前に使う
 - koushu: 工種（例: バルコニー補修、外壁塗装、防水工事）
 - basho: 工事場所（例: 203、2F廊下、北面）。工事場所欄が空でも、自由記述欄に部屋番号や場所があればそれを使う
 - naiyou: 作業内容（例: シール擦り込み、高圧洗浄、施工前）
@@ -73,8 +74,9 @@ const SCHEMA = {
       koushu: { type: 'STRING' },
       basho: { type: 'STRING' },
       naiyou: { type: 'STRING' },
+      koujimei: { type: 'STRING' },
     },
-    required: ['image_no', 'koushu', 'basho', 'naiyou'],
+    required: ['image_no', 'koushu', 'basho', 'naiyou', 'koujimei'],
   },
 };
 
@@ -181,7 +183,7 @@ async function readBoards(batch) {
     const arr = JSON.parse(data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '[]');
     batch.forEach((it, i) => {
       const o = arr.find((x) => x.image_no === i + 1) || arr[i] || {};
-      Object.assign(it, { koushu: o.koushu || '', basho: o.basho || '', naiyou: o.naiyou || '' });
+      Object.assign(it, { koushu: o.koushu || '', basho: o.basho || '', naiyou: o.naiyou || '', koujimei: o.koujimei || '' });
       it.inputs.forEach((inp) => { inp.value = it[inp.dataset.k]; });
     });
   } catch (e) {
@@ -257,12 +259,22 @@ async function makeZip(entries) {
   return new Blob([...parts, ...central, e], { type: 'application/zip' });
 }
 
+// 保存名: ファイル名リネーム後の写真_工事名（一番多く読み取れた工事名）
+function saveName() {
+  const cnt = {};
+  items.forEach((it) => { const k = clean(it.koujimei); if (k) cnt[k] = (cnt[k] || 0) + 1; });
+  const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+  return top ? `ファイル名リネーム後の写真_${top}` : 'ファイル名リネーム後の写真';
+}
+
 $('#zip').addEventListener('click', async () => {
   rename();
+  const folder = saveName();
   // Chrome/Edge: 選んだフォルダに新しい名前で直接保存。それ以外はZIP
   if (window.showDirectoryPicker) {
     let dir;
     try { dir = await showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
+    dir = await dir.getDirectoryHandle(folder, { create: true });
     $('#status').textContent = '保存中…';
     for (const it of items) {
       const w = await (await dir.getFileHandle(it.newName, { create: true })).createWritable();
@@ -276,7 +288,7 @@ $('#zip').addEventListener('click', async () => {
   for (const it of items) entries.push({ name: it.newName, data: new Uint8Array(await it.file.arrayBuffer()) });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(await makeZip(entries));
-  a.download = '工事写真.zip';
+  a.download = `${folder}.zip`;
   a.click();
   $('#status').textContent = `保存しました（${items.length}枚）。`;
 });
