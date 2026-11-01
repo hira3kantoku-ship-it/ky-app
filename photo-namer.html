@@ -18,6 +18,9 @@
   td input { width: 100%; box-sizing: border-box; padding: 4px; font-size: 14px; }
   .name { font-weight: bold; word-break: break-all; }
   .err { color: #c00; }
+  #zip.ready { background: #e8730c; font-weight: bold; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,115,12,.7); } 50% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(232,115,12,0); } }
+  .bar { position: sticky; top: 0; z-index: 5; background: #f4f6f8; padding: 6px 0; }
   #drop { border: 3px dashed #1a4a7a; border-radius: 10px; background: #fff; padding: 40px 16px; text-align: center; color: #1a4a7a; font-size: 18px; font-weight: bold; margin-bottom: 12px; cursor: pointer; }
   #drop.over { background: #dbe8f5; border-style: solid; }
   #drop small { display: block; font-size: 13px; font-weight: normal; color: #555; margin-top: 6px; }
@@ -212,7 +215,7 @@ async function handleFiles(files) {
   if (!files.length) return;
   if (!$('#key').value.trim()) { alert('Gemini APIキーを入力してください'); return; }
   localStorage.setItem('geminiKey', $('#key').value.trim());
-  $('#tbl').hidden = false; $('#zip').disabled = true;
+  $('#tbl').hidden = false; $('#zip').disabled = true; $('#zip').classList.remove('ready');
   const added = [];
   for (const file of files) {
     const date = exifDate(await file.slice(0, 131072).arrayBuffer());
@@ -230,6 +233,7 @@ async function handleFiles(files) {
   rename();
   $('#status').textContent = `完了（${items.length}枚）。内容を確認して「写真を保存」を押してください。`;
   $('#zip').disabled = false;
+  $('#zip').classList.add('ready'); // 保存できることを目立たせる
 }
 
 // ---- ZIP作成（無圧縮・UTF-8ファイル名） ----
@@ -268,6 +272,7 @@ function saveName() {
 }
 
 $('#zip').addEventListener('click', async () => {
+  $('#zip').classList.remove('ready');
   rename();
   const folder = saveName();
   // Chrome/Edge: 選んだフォルダに新しい名前で直接保存。それ以外はZIP
