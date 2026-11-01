@@ -18,6 +18,9 @@
   td input { width: 100%; box-sizing: border-box; padding: 4px; font-size: 14px; }
   .name { font-weight: bold; word-break: break-all; }
   .err { color: #c00; }
+  #drop { border: 3px dashed #1a4a7a; border-radius: 10px; background: #fff; padding: 40px 16px; text-align: center; color: #1a4a7a; font-size: 18px; font-weight: bold; margin-bottom: 12px; cursor: pointer; }
+  #drop.over { background: #dbe8f5; border-style: solid; }
+  #drop small { display: block; font-size: 13px; font-weight: normal; color: #555; margin-top: 6px; }
   #status { margin: 8px 0; font-size: 14px; }
 </style>
 </head>
@@ -30,6 +33,7 @@
   <input id="key" type="password" placeholder="Gemini APIキーを貼り付け" style="flex:1;min-width:200px;padding:8px;font-size:14px">
   <span id="keyState" style="align-self:center;font-size:13px"></span>
 </div>
+<div id="drop">ここに写真をドラッグ＆ドロップ<small>（クリックして選ぶこともできます・JPEGのみ）</small></div>
 <div id="status"></div>
 <table id="tbl" hidden>
   <thead><tr><th>写真</th><th>撮影日時</th><th>工種</th><th>工事場所</th><th>作業内容</th><th>新しいファイル名</th></tr></thead>
@@ -185,9 +189,24 @@ async function readBoards(batch) {
   }
 }
 
-$('#files').addEventListener('change', async (ev) => {
-  const files = [...ev.target.files];
-  ev.target.value = '';
+$('#files').addEventListener('change', (ev) => { const f = [...ev.target.files]; ev.target.value = ''; handleFiles(f); });
+
+// ---- ドラッグ＆ドロップ枠 ----
+const drop = $('#drop');
+drop.addEventListener('click', () => $('#files').click());
+drop.addEventListener('dragover', (ev) => { ev.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', (ev) => {
+  ev.preventDefault(); drop.classList.remove('over');
+  const f = [...ev.dataTransfer.files].filter((x) => /\.jpe?g$/i.test(x.name) || x.type === 'image/jpeg');
+  if (!f.length) { alert('JPEG写真をドロップしてください'); return; }
+  handleFiles(f);
+});
+// 枠の外に落としてもブラウザで写真が開かないようにする
+window.addEventListener('dragover', (ev) => ev.preventDefault());
+window.addEventListener('drop', (ev) => ev.preventDefault());
+
+async function handleFiles(files) {
   if (!files.length) return;
   if (!$('#key').value.trim()) { alert('Gemini APIキーを入力してください'); return; }
   localStorage.setItem('geminiKey', $('#key').value.trim());
@@ -209,7 +228,7 @@ $('#files').addEventListener('change', async (ev) => {
   rename();
   $('#status').textContent = `完了（${items.length}枚）。内容を確認して「写真を保存」を押してください。`;
   $('#zip').disabled = false;
-});
+}
 
 // ---- ZIP作成（無圧縮・UTF-8ファイル名） ----
 const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
