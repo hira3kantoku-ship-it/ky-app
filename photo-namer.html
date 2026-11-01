@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工事写真 命名ツール</title>
+<style>
+  body { font-family: sans-serif; margin: 0; padding: 16px; background: #f4f6f8; color: #222; }
+  h1 { font-size: 20px; color: #1a4a7a; margin: 0 0 12px; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  button, label.btn { background: #1a4a7a; color: #fff; border: 0; border-radius: 6px; padding: 10px 14px; font-size: 15px; cursor: pointer; }
+  button:disabled { background: #999; }
+  input[type=file] { display: none; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+  th, td { border: 1px solid #ddd; padding: 6px; vertical-align: middle; }
+  th { background: #e8eef5; }
+  td img { width: 90px; height: 68px; object-fit: cover; display: block; }
+  td input { width: 100%; box-sizing: border-box; padding: 4px; font-size: 14px; }
+  .name { font-weight: bold; word-break: break-all; }
+  .err { color: #c00; }
+  #status { margin: 8px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>工事写真 命名ツール</h1>
+<p style="font-size:13px;margin:0 0 12px">工事黒板を読み取り「工種_工事場所_作業内容」でファイル名を付けます。同じ名前は撮影日時順に連番を付けます。読み取り結果は修正できます。</p>
+<div class="bar">
+  <label class="btn">写真を選択<input id="files" type="file" accept="image/jpeg" multiple></label>
+  <button id="zip" disabled>ZIPで保存</button>
+</div>
+<div id="status"></div>
+<table id="tbl" hidden>
+  <thead><tr><th>写真</th><th>撮影日時</th><th>工種</th><th>工事場所</th><th>作業内容</th><th>新しいファイル名</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<script>
+const items = [];
+const $ = (s) => document.querySelector(s);
+
+// ---- EXIF の撮影日時 (DateTimeOriginal) を読む ----
+function exifDate(buf) {
+  const v = new DataView(buf);
+  if (v.getUint16(0) !== 0xFFD8) return null;
+  let p = 2;
+  while (p < v.byteLength - 4) {
+    const mk = v.getUint16(p), len = v.getUint16(p + 2);
+    if (mk === 0xFFE1 && v.getUint32(p + 4) === 0x45786966) {
+      const t = p + 10, le = v.getUint16(t) === 0x4949;
+      const u16 = (o) => v.getUint16(t + o, le), u32 = (o) => v.getUint32(t + o, le);
+      const find = (ifd, tag) => {
+        const n = u16(ifd);
+        for (let i = 0; i < n; i++) { const e = ifd + 2 + i * 12; if (u16(e) === tag) return e; }
+        return null;
+      };
+      const str = (e) => { const o = u32(e + 8); let s = ''; for (let i = 0; i < 19; i++) s += String.fromCharCode(v.getUint8(t + o + i)); return s; };
+      const ifd0 = u32(4);
+      const sub = find(ifd0, 0x8769);
+      if (sub) { const e = find(u32(sub + 8), 0x9003); if (e) return str(e); }
+      const e = find(ifd0, 0x0132);
+      return e ? str(e) : null;
+    }
+    if ((mk & 0xFF00) !== 0xFF00) break;
+    p += 2 + len;
+  }
+  return null;
+}
+
+// ---- 送信用に縮小 (長辺1568px) ----
+async function toBase64(file) {
+  const bmp = await createImageBitmap(file);
+  const s = Math.min(1, 1568 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.85).split(',')[1];
+}
+
+const clean = (s) => (s || '').replace(/[\\/:*?"<>|\r\n\t]/g, '').replace(/\s+/g, ' ').trim();
+
+// ---- ファイル名を確定（同名は撮影日時順に連番） ----
+function rename() {
+  const groups = {};
+  for (const it of items) {
+    const base = [it.koushu, it.basho, it.naiyou].map(clean).filter(Boolean).join('_') || '未判読';
+    (groups[base] ||= []).push(it);
+  }
+  for (const [base, list] of Object.entries(groups)) {
+    list.sort((a, b) => (a.date || '9').localeCompare(b.date || '9') || a.file.lastModified - b.file.lastModified);
+    const w = String(list.length).length < 2 ? 2 : String(list.length).length;
+    list.forEach((it, i) => {
+      it.newName = (list.length > 1 ? `${base}_${String(i + 1).padStart(w, '0')}` : base) + '.jpg';
+    });
+  }
+  items.forEach((it) => { it.nameCell.textContent = it.newName; });
+}
+
+function addRow(it) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><img></td><td>${it.date || '<span class="err">なし</span>'}</td>
+    <td><input data-k="koushu"></td><td><input data-k="basho"></td><td><input data-k="naiyou"></td><td class="name">読み取り中…</td>`;
+  tr.querySelector('img').src = URL.createObjectURL(it.file);
+  it.inputs = tr.querySelectorAll('input');
+  it.inputs.forEach((inp) => inp.addEventListener('input', () => { it[inp.dataset.k] = inp.value; rename(); }));
+  it.nameCell = tr.querySelector('.name');
+  $('#tbl tbody').appendChild(tr);
+}
+
+async function readBoard(it) {
+  try {
+    const r = await fetch('./api/read-board', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: await toBase64(it.file) }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    Object.assign(it, d);
+    it.inputs.forEach((inp) => { inp.value = it[inp.dataset.k]; });
+  } catch (e) {
+    it.error = true;
+    it.nameCell.innerHTML = `<span class="err">読み取り失敗: ${e.message}</span>`;
+  }
+}
+
+$('#files').addEventListener('change', async (ev) => {
+  const files = [...ev.target.files];
+  ev.target.value = '';
+  if (!files.length) return;
+  $('#tbl').hidden = false; $('#zip').disabled = true;
+  const added = [];
+  for (const file of files) {
+    const date = exifDate(await file.slice(0, 131072).arrayBuffer());
+    const it = { file, date: date ? date.replace(/^(\d{4}):(\d\d):(\d\d)/, '$1/$2/$3') : '', koushu: '', basho: '', naiyou: '' };
+    items.push(it); added.push(it); addRow(it);
+  }
+  let done = 0;
+  const show = () => { $('#status').textContent = `読み取り中 ${done}/${added.length}`; };
+  show();
+  const queue = [...added];
+  await Promise.all(Array.from({ length: 3 }, async () => {
+    while (queue.length) { await readBoard(queue.shift()); done++; show(); }
+  }));
+  rename();
+  $('#status').textContent = `完了（${items.length}枚）。内容を確認して「ZIPで保存」を押してください。`;
+  $('#zip').disabled = false;
+});
+
+// ---- ZIP作成（無圧縮・UTF-8ファイル名） ----
+const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+const crc32 = (u8) => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = crcTable[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+
+async function makeZip(entries) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  let offset = 0;
+  for (const { name, data } of entries) {
+    const n = enc.encode(name), crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, n.length, true);
+    parts.push(h, n, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, n.length, true);
+    c.setUint32(42, offset, true);
+    central.push(c, n);
+    offset += 30 + n.length + data.length;
+  }
+  const size = central.reduce((s, x) => s + x.byteLength, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, entries.length, true); e.setUint16(10, entries.length, true);
+  e.setUint32(12, size, true); e.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, e], { type: 'application/zip' });
+}
+
+$('#zip').addEventListener('click', async () => {
+  rename();
+  $('#status').textContent = 'ZIP作成中…';
+  const entries = [];
+  for (const it of items) entries.push({ name: it.newName, data: new Uint8Array(await it.file.arrayBuffer()) });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(await makeZip(entries));
+  a.download = '工事写真.zip';
+  a.click();
+  $('#status').textContent = `保存しました（${items.length}枚）。`;
+});
+</script>
+</body>
+</html>
