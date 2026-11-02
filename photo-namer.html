@@ -3,53 +3,106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>工事写真 命名ツール</title>
+<title>工事写真 名前ツール</title>
 <style>
-  body { font-family: sans-serif; margin: 0; padding: 16px; background: #f4f6f8; color: #222; }
-  h1 { font-size: 20px; color: #1a4a7a; margin: 0 0 12px; }
-  .bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-  button, label.btn { background: #1a4a7a; color: #fff; border: 0; border-radius: 6px; padding: 10px 14px; font-size: 15px; cursor: pointer; }
-  button:disabled { background: #999; }
+  :root { --navy: #0f2240; --blue: #1a5fc8; --orange: #e8730c; --line: #d9dee6; --bg: #f3f5f8; --empty: #fff8dc; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", sans-serif; margin: 0; background: var(--bg); color: #1f2937; }
+  header { background: var(--navy); color: #fff; display: flex; align-items: center; gap: 16px; padding: 14px 24px; flex-wrap: wrap; position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 24px; margin: 0; flex: 1; letter-spacing: .05em; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: bold; padding: 3px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; }
+  .b-ok { color: #1c8a3a; background: #e6f6ea; border-color: #7fcf93; }
+  .b-ng { color: #b7791f; background: #fff7e0; border-color: #f2c66d; }
+  .b-key { color: #fff; border-color: #4a5d80; }
+  #savedCount { font-size: 14px; font-weight: bold; }
+  #key { width: 220px; padding: 6px 8px; border-radius: 4px; border: 1px solid #4a5d80; background: #1b3157; color: #fff; font-size: 13px; }
+  main { padding: 20px 24px; }
+  .top { display: flex; gap: 20px; align-items: stretch; margin-bottom: 16px; flex-wrap: wrap; }
+  .act { text-align: center; font-size: 12px; color: #555; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 6px; color: #fff; font-size: 15px; font-weight: bold; padding: 14px 26px; cursor: pointer; margin-bottom: 6px; min-width: 190px; }
+  .btn svg { width: 18px; height: 18px; }
+  .btn.blue { background: var(--blue); }
+  .btn.orange { background: var(--orange); }
+  .btn:disabled { background: #b8bec8; cursor: default; }
+  #zip.ready { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,115,12,.7); } 50% { transform: scale(1.06); box-shadow: 0 0 0 10px rgba(232,115,12,0); } }
   input[type=file] { display: none; }
-  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
-  th, td { border: 1px solid #ddd; padding: 6px; vertical-align: middle; }
-  th { background: #e8eef5; }
-  td img { width: 90px; height: 68px; object-fit: cover; display: block; }
-  td input { width: 100%; box-sizing: border-box; padding: 4px; font-size: 14px; }
-  .name { font-weight: bold; word-break: break-all; }
-  .err { color: #c00; }
-  #zip.ready { background: #e8730c; font-weight: bold; animation: pulse 1.2s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,115,12,.7); } 50% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(232,115,12,0); } }
-  .bar { position: sticky; top: 0; z-index: 5; background: #f4f6f8; padding: 6px 0; }
-  #drop { border: 3px dashed #1a4a7a; border-radius: 10px; background: #fff; padding: 40px 16px; text-align: center; color: #1a4a7a; font-size: 18px; font-weight: bold; margin-bottom: 12px; cursor: pointer; }
-  #drop.over { background: #dbe8f5; border-style: solid; }
-  #drop small { display: block; font-size: 13px; font-weight: normal; color: #555; margin-top: 6px; }
-  #status { margin: 8px 0; font-size: 14px; }
+  #drop { flex: 1; min-width: 280px; border: 2px dashed var(--blue); border-radius: 8px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--blue); font-size: 18px; font-weight: bold; cursor: pointer; padding: 16px; }
+  #drop .row { display: flex; align-items: center; gap: 10px; }
+  #drop svg { width: 34px; height: 34px; }
+  #drop small { font-size: 12px; font-weight: normal; color: #6b7280; margin-top: 6px; }
+  #drop.over { background: #e3edfb; border-style: solid; }
+  .tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fff; border: 1px solid var(--line); border-bottom: 0; border-radius: 8px 8px 0 0; padding: 10px 14px; font-size: 14px; }
+  .tools label { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
+  .tbtn { border: 1px solid var(--line); background: #fff; border-radius: 4px; padding: 6px 14px; font-size: 13px; font-weight: bold; cursor: pointer; color: #333; }
+  .tbtn.primary { border-color: var(--blue); color: var(--blue); }
+  .tools .sp { flex: 1; }
+  #sort { padding: 6px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px; }
+  #status { font-size: 13px; color: #555; }
+  .wrap { overflow-x: auto; background: #fff; border: 1px solid var(--line); border-radius: 0 0 8px 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+  th { background: var(--navy); color: #fff; padding: 10px 6px; font-weight: bold; }
+  td { border-top: 1px solid var(--line); border-left: 1px solid #eef0f4; padding: 8px 6px; text-align: center; }
+  tr.sel td { background: #f0f6ff; }
+  td img { width: 80px; height: 60px; object-fit: cover; border-radius: 3px; display: block; margin: auto; }
+  td.date { color: #555; white-space: nowrap; line-height: 1.5; }
+  td input[type=text] { width: 100%; padding: 8px; border: 1px solid #cfd5de; border-radius: 4px; font-size: 13px; background: #fff; }
+  td input[type=text].empty { background: var(--empty); border-color: #f0e2b0; }
+  td input[readonly] { background: #fafbfc; }
+  input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--blue); }
+  .err { color: #c00; font-size: 12px; }
+  #empty td { padding: 40px; color: #888; }
 </style>
 </head>
 <body>
-<h1>工事写真 命名ツール</h1>
-<p style="font-size:13px;margin:0 0 12px">工事黒板を読み取り「工種_工事場所_作業内容」でファイル名を付けます。同じ名前は撮影日時順に連番を付けます。読み取り結果は修正できます。</p>
-<div class="bar">
-  <label class="btn">写真を選択<input id="files" type="file" accept="image/jpeg" multiple></label>
-  <button id="zip" disabled>写真を保存</button>
-  <input id="key" type="password" placeholder="Gemini APIキーを貼り付け" style="flex:1;min-width:200px;padding:8px;font-size:14px">
-  <span id="keyState" style="align-self:center;font-size:13px"></span>
-</div>
-<div id="drop">ここに写真をドラッグ＆ドロップ<small>（クリックして選ぶこともできます・JPEGのみ）</small></div>
-<div id="status"></div>
-<table id="tbl" hidden>
-  <thead><tr><th>写真</th><th>撮影日時</th><th>工種</th><th>工事場所</th><th>作業内容</th><th>新しいファイル名</th></tr></thead>
-  <tbody></tbody>
-</table>
+<header>
+  <h1>工事写真 名前ツール</h1>
+  <input id="key" type="password" placeholder="Gemini APIキーを貼り付け">
+  <span id="keyState" class="badge b-key"></span>
+  <span id="savedBadge" class="badge b-ok" hidden>✔ 保存済み</span>
+  <span id="savedCount">保存済み：0 / 0 枚</span>
+</header>
+<main>
+  <div class="top">
+    <div class="act">
+      <label class="btn blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 16V4m0 0l-5 5m5-5l5 5M4 20h16"/></svg>工事写真を選択<input id="files" type="file" accept="image/jpeg" multiple></label>
+      <div>ファイルを選択</div>
+    </div>
+    <div class="act">
+      <button id="zip" class="btn orange" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 3h11l3 3v15H5z M8 3v6h8V3 M8 21v-7h8v7"/></svg>写真を保存</button>
+      <div>全ての変更を保存</div>
+    </div>
+    <div id="drop">
+      <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18a5 5 0 01-.6-9.96A6 6 0 0118 9a4.5 4.5 0 01-.5 9M12 12v8m0-8l-3 3m3-3l3 3"/></svg>ここに写真をドラッグ＆ドロップ</div>
+      <small>クリックして選ぶこともできます・JPEGのみ</small>
+    </div>
+  </div>
+  <div class="tools">
+    <label><input type="checkbox" id="allChk">すべて選択</label>
+    <span id="selCount">選択中：0 件</span>
+    <button class="tbtn primary" id="bulkSet">一括入力</button>
+    <button class="tbtn" id="bulkClear">一括クリア</button>
+    <button class="tbtn" id="bulkDel">🗑 削除</button>
+    <span class="sp"></span>
+    <span id="status"></span>
+    <select id="sort"><option value="desc">撮影日時（新しい順）</option><option value="asc">撮影日時（古い順）</option></select>
+  </div>
+  <div class="wrap">
+    <table>
+      <thead><tr><th style="width:40px"><input type="checkbox" id="allChk2"></th><th>写真</th><th>撮影日時</th><th style="width:15%">工種</th><th style="width:13%">工事場所</th><th style="width:15%">作業内容</th><th style="width:27%">新しいファイル名</th><th style="width:70px">状態</th></tr></thead>
+      <tbody><tr id="empty"><td colspan="8">写真をドラッグ＆ドロップすると、ここに一覧が表示されます</td></tr></tbody>
+    </table>
+  </div>
+</main>
 
 <script>
-const items = [];
+let items = [];
 const $ = (s) => document.querySelector(s);
+const FIELDS = ['koushu', 'basho', 'naiyou'];
 
 // ---- APIキー（このブラウザにだけ保存） ----
-// 入力した時点で自動保存し、状態を表示する
-const showKey = () => { $('#keyState').textContent = localStorage.getItem('geminiKey') ? '✅ キー保存済み' : '⚠ キー未入力'; };
+const showKey = () => { $('#keyState').textContent = localStorage.getItem('geminiKey') ? '✔ キー保存済み' : '⚠ キー未入力'; };
 $('#key').value = localStorage.getItem('geminiKey') || '';
 $('#key').addEventListener('input', () => { localStorage.setItem('geminiKey', $('#key').value.trim()); showKey(); });
 showKey();
@@ -146,29 +199,64 @@ const clean = (s) => (s || '').replace(/[\\/:*?"<>|\r\n\t]/g, '').replace(/\s+/g
 function rename() {
   const groups = {};
   for (const it of items) {
-    const base = [it.koushu, it.basho, it.naiyou].map(clean).filter(Boolean).join('_') || '未判読';
+    const base = FIELDS.map((k) => clean(it[k])).filter(Boolean).join('_') || '未判読';
     (groups[base] ||= []).push(it);
   }
   for (const [base, list] of Object.entries(groups)) {
     list.sort((a, b) => (a.date || '9').localeCompare(b.date || '9') || a.file.lastModified - b.file.lastModified);
-    const w = String(list.length).length < 2 ? 2 : String(list.length).length;
+    const w = Math.max(2, String(list.length).length);
     list.forEach((it, i) => {
       it.newName = (list.length > 1 ? `${base}_${String(i + 1).padStart(w, '0')}` : base) + '.jpg';
     });
   }
-  items.forEach((it) => { it.nameCell.textContent = it.newName; });
+  items.forEach((it) => { if (!it.error) it.nameInput.value = it.newName; });
+  refresh();
 }
+
+// ---- 表示の更新（件数・状態・空欄の色） ----
+function refresh() {
+  const saved = items.filter((it) => it.saved).length;
+  $('#savedCount').textContent = `保存済み：${saved} / ${items.length} 枚`;
+  $('#savedBadge').hidden = !(items.length && saved === items.length);
+  const sel = items.filter((it) => it.chk.checked).length;
+  $('#selCount').textContent = `選択中：${sel} 件`;
+  $('#allChk').checked = $('#allChk2').checked = items.length > 0 && sel === items.length;
+  $('#empty').hidden = items.length > 0;
+  items.forEach((it) => {
+    it.tr.classList.toggle('sel', it.chk.checked);
+    it.inputs.forEach((inp) => inp.classList.toggle('empty', !inp.value));
+    it.stateCell.innerHTML = it.saved ? '<span class="badge b-ok">保存済み</span>' : '<span class="badge b-ng">未保存</span>';
+  });
+  if (!$('#status').dataset.busy) $('#status').textContent = items.length ? `全 ${items.length} 枚中 ${saved} 枚 保存済み` : '';
+}
+
+function sortRows() {
+  const dir = $('#sort').value === 'asc' ? 1 : -1;
+  items.sort((a, b) => dir * ((a.date || '').localeCompare(b.date || '') || a.file.lastModified - b.file.lastModified));
+  const tb = $('tbody');
+  items.forEach((it) => tb.appendChild(it.tr));
+}
+$('#sort').addEventListener('change', sortRows);
 
 function addRow(it) {
   const tr = document.createElement('tr');
-  tr.innerHTML = `<td><img></td><td>${it.date || '<span class="err">なし</span>'}</td>
-    <td><input data-k="koushu"></td><td><input data-k="basho"></td><td><input data-k="naiyou"></td><td class="name">読み取り中…</td>`;
+  const [d, t] = (it.date || '').split(' ');
+  tr.innerHTML = `<td><input type="checkbox"></td><td><img></td>
+    <td class="date">${it.date ? `${d}<br>${t}` : '<span class="err">日時なし</span>'}</td>
+    <td><input type="text" data-k="koushu"></td><td><input type="text" data-k="basho"></td><td><input type="text" data-k="naiyou"></td>
+    <td><input type="text" readonly value="読み取り中…"></td><td></td>`;
   tr.querySelector('img').src = URL.createObjectURL(it.file);
-  it.inputs = tr.querySelectorAll('input');
-  it.inputs.forEach((inp) => inp.addEventListener('input', () => { it[inp.dataset.k] = inp.value; rename(); }));
-  it.nameCell = tr.querySelector('.name');
-  $('#tbl tbody').appendChild(tr);
+  it.tr = tr;
+  it.chk = tr.querySelector('input[type=checkbox]');
+  it.chk.addEventListener('change', refresh);
+  it.inputs = tr.querySelectorAll('input[data-k]');
+  it.inputs.forEach((inp) => inp.addEventListener('input', () => { it[inp.dataset.k] = inp.value; it.saved = false; rename(); }));
+  it.nameInput = tr.querySelector('input[readonly]');
+  it.stateCell = tr.lastElementChild;
+  $('tbody').appendChild(tr);
 }
+
+const setNote = (batch, msg) => batch.forEach((it) => { it.nameInput.value = msg; });
 
 // 10枚ずつまとめて1回で送る（30枚なら3回）
 async function readBoards(batch) {
@@ -178,7 +266,7 @@ async function readBoards(batch) {
     for (let i = 0; i < 6; i++) { // 無料枠の回数制限(429)は待って再試行
       r = await callGemini(images);
       if (r.status !== 429) break;
-      batch.forEach((it) => { it.nameCell.textContent = '回数制限のため待機中…'; });
+      setNote(batch, '回数制限のため待機中…');
       await new Promise((ok) => setTimeout(ok, 20000));
     }
     if (!r.ok) throw new Error(`Gemini(${r.status}) ${(await r.text()).slice(0, 200)}`);
@@ -190,8 +278,32 @@ async function readBoards(batch) {
       it.inputs.forEach((inp) => { inp.value = it[inp.dataset.k]; });
     });
   } catch (e) {
-    batch.forEach((it) => { it.nameCell.innerHTML = `<span class="err">読み取り失敗: ${e.message}</span>`; });
+    setNote(batch, '読み取り失敗');
+    batch.forEach((it) => { it.nameInput.title = e.message; });
+    alert(`読み取りに失敗しました\n${e.message}`);
   }
+}
+
+async function handleFiles(files) {
+  if (!files.length) return;
+  if (!$('#key').value.trim()) { alert('右上の欄にGemini APIキーを入力してください'); return; }
+  $('#zip').disabled = true; $('#zip').classList.remove('ready');
+  const added = [];
+  for (const file of files) {
+    const date = exifDate(await file.slice(0, 131072).arrayBuffer());
+    const it = { file, date: date ? date.replace(/^(\d{4}):(\d\d):(\d\d)/, '$1/$2/$3') : '', koushu: '', basho: '', naiyou: '', koujimei: '', saved: false };
+    items.push(it); added.push(it); addRow(it);
+  }
+  sortRows(); refresh();
+  $('#status').dataset.busy = '1';
+  for (let i = 0; i < added.length; i += MAX_IMAGES) {
+    $('#status').textContent = `読み取り中 ${i}/${added.length}`;
+    await readBoards(added.slice(i, i + MAX_IMAGES));
+  }
+  delete $('#status').dataset.busy;
+  rename();
+  $('#zip').disabled = false;
+  $('#zip').classList.add('ready'); // 保存できることを目立たせる
 }
 
 $('#files').addEventListener('change', (ev) => { const f = [...ev.target.files]; ev.target.value = ''; handleFiles(f); });
@@ -207,34 +319,36 @@ drop.addEventListener('drop', (ev) => {
   if (!f.length) { alert('JPEG写真をドロップしてください'); return; }
   handleFiles(f);
 });
-// 枠の外に落としてもブラウザで写真が開かないようにする
 window.addEventListener('dragover', (ev) => ev.preventDefault());
 window.addEventListener('drop', (ev) => ev.preventDefault());
 
-async function handleFiles(files) {
-  if (!files.length) return;
-  if (!$('#key').value.trim()) { alert('Gemini APIキーを入力してください'); return; }
-  localStorage.setItem('geminiKey', $('#key').value.trim());
-  $('#tbl').hidden = false; $('#zip').disabled = true; $('#zip').classList.remove('ready');
-  const added = [];
-  for (const file of files) {
-    const date = exifDate(await file.slice(0, 131072).arrayBuffer());
-    const it = { file, date: date ? date.replace(/^(\d{4}):(\d\d):(\d\d)/, '$1/$2/$3') : '', koushu: '', basho: '', naiyou: '' };
-    items.push(it); added.push(it); addRow(it);
+// ---- 選択と一括操作 ----
+const selected = () => items.filter((it) => it.chk.checked);
+[$('#allChk'), $('#allChk2')].forEach((c) => c.addEventListener('change', () => { items.forEach((it) => { it.chk.checked = c.checked; }); refresh(); }));
+const needSel = () => { const s = selected(); if (!s.length) alert('写真を選択してください'); return s; };
+$('#bulkSet').addEventListener('click', () => {
+  const s = needSel(); if (!s.length) return;
+  const labels = { koushu: '工種', basho: '工事場所', naiyou: '作業内容' };
+  for (const k of FIELDS) {
+    const v = prompt(`${labels[k]}を入力（空欄のままOKで変更しません）`, '');
+    if (v === null) return;
+    if (v.trim()) s.forEach((it) => { it[k] = v.trim(); it.saved = false; });
   }
-  let done = 0;
-  const show = () => { $('#status').textContent = `読み取り中 ${done}/${added.length}`; };
-  show();
-  for (let i = 0; i < added.length; i += 10) {
-    const batch = added.slice(i, i + 10);
-    await readBoards(batch);
-    done += batch.length; show();
-  }
+  s.forEach((it) => it.inputs.forEach((inp) => { inp.value = it[inp.dataset.k]; }));
   rename();
-  $('#status').textContent = `完了（${items.length}枚）。内容を確認して「写真を保存」を押してください。`;
-  $('#zip').disabled = false;
-  $('#zip').classList.add('ready'); // 保存できることを目立たせる
-}
+});
+$('#bulkClear').addEventListener('click', () => {
+  const s = needSel(); if (!s.length || !confirm(`${s.length}件の工種・工事場所・作業内容を空にします`)) return;
+  s.forEach((it) => { FIELDS.forEach((k) => { it[k] = ''; }); it.saved = false; it.inputs.forEach((inp) => { inp.value = ''; }); });
+  rename();
+});
+$('#bulkDel').addEventListener('click', () => {
+  const s = needSel(); if (!s.length || !confirm(`${s.length}件を一覧から削除します（元の写真は消えません）`)) return;
+  s.forEach((it) => it.tr.remove());
+  items = items.filter((it) => !s.includes(it));
+  rename();
+  if (!items.length) { $('#zip').disabled = true; $('#zip').classList.remove('ready'); }
+});
 
 // ---- ZIP作成（無圧縮・UTF-8ファイル名） ----
 const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
@@ -275,27 +389,25 @@ $('#zip').addEventListener('click', async () => {
   $('#zip').classList.remove('ready');
   rename();
   const folder = saveName();
-  // Chrome/Edge: 選んだフォルダに新しい名前で直接保存。それ以外はZIP
+  // Chrome/Edge: 選んだフォルダの中に新しい名前で直接保存。それ以外はZIP
   if (window.showDirectoryPicker) {
     let dir;
     try { dir = await showDirectoryPicker({ mode: 'readwrite' }); } catch { return; }
     dir = await dir.getDirectoryHandle(folder, { create: true });
-    $('#status').textContent = '保存中…';
     for (const it of items) {
       const w = await (await dir.getFileHandle(it.newName, { create: true })).createWritable();
       await w.write(it.file); await w.close();
     }
-    $('#status').textContent = `「${dir.name}」に保存しました（${items.length}枚）。`;
-    return;
+  } else {
+    const entries = [];
+    for (const it of items) entries.push({ name: it.newName, data: new Uint8Array(await it.file.arrayBuffer()) });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await makeZip(entries));
+    a.download = `${folder}.zip`;
+    a.click();
   }
-  $('#status').textContent = 'ZIP作成中…';
-  const entries = [];
-  for (const it of items) entries.push({ name: it.newName, data: new Uint8Array(await it.file.arrayBuffer()) });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(await makeZip(entries));
-  a.download = `${folder}.zip`;
-  a.click();
-  $('#status').textContent = `保存しました（${items.length}枚）。`;
+  items.forEach((it) => { it.saved = true; });
+  refresh();
 });
 </script>
 </body>
